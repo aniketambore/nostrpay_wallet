@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nostrpay_wallet/bloc/account/account_cubit.dart';
 import 'package:nostrpay_wallet/bloc/account/account_state.dart';
+import 'package:nostrpay_wallet/routes/initial_walkthrough/initial_walkthrough_page.dart';
 import 'package:nostrpay_wallet/routes/splash/splash_page.dart';
 
 class UserApp extends StatelessWidget {
@@ -27,6 +28,11 @@ class UserApp extends StatelessWidget {
             case 'splash':
               return MaterialPageRoute(
                 builder: (_) => SplashPage(isInitial: accState.initial),
+                settings: settings,
+              );
+            case '/intro':
+              return MaterialPageRoute(
+                builder: (_) => const InitialWalkthroughPage(),
                 settings: settings,
               );
           }
