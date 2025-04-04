@@ -16,6 +16,7 @@ dependencies:
   hydrated_bloc: ^10.0.0
   path_provider: ^2.1.5
   flutter_app_group_directory: ^1.1.0
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:
