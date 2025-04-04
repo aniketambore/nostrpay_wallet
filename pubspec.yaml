@@ -1,6 +1,6 @@
 name: nostrpay_wallet
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
@@ -9,6 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  ldk_node: ^0.3.0
+  bip39: ^1.0.6
+  flutter_secure_storage: ^4.2.1
+  flutter_bloc: ^9.1.0
+  hydrated_bloc: ^10.0.0
 
 dev_dependencies:
   flutter_test:
