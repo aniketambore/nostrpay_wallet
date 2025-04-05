@@ -98,7 +98,9 @@ class _WalletActions extends StatelessWidget {
         _buildActionButton(
           icon: Icons.call_received,
           label: 'Receive',
-          onPressed: () {},
+          onPressed: () {
+            Navigator.of(context).pushNamed("/create-invoice");
+          },
         ),
         _buildActionButton(
           icon: Icons.visibility,

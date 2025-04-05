@@ -6,6 +6,7 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:ldk_node/ldk_node.dart';
 import 'package:nostrpay_wallet/app_config.dart';
 import 'package:nostrpay_wallet/config.dart' as cfg;
+import 'package:nostrpay_wallet/models/models.dart';
 import 'package:nostrpay_wallet/services/olympus_api.dart';
 
 import 'account_state.dart';
@@ -178,6 +179,23 @@ class AccountCubit extends Cubit<AccountState> with HydratedMixin {
     return channelInfo;
   }
 
+  Future<String> addInvoice({
+    String description = "",
+    required int amountSat,
+    int expirySecs = 3600 * 24, // Default to 1 day
+  }) async {
+    debugPrint("addInvoice: $description, $amountSat");
+
+    Bolt11Payment bolt11Payment = await _ldkNode!.bolt11Payment();
+
+    Bolt11Invoice req = await bolt11Payment.receive(
+      amountMsat: BigInt.from(amountSat * 1000),
+      expirySecs: expirySecs,
+      description: description,
+    );
+    return req.signedRawInvoice;
+  }
+
   Future<bool> _connectToOlympus() async {
     if (_ldkNode != null) {
       debugPrint('Connecting to Olympus');
@@ -214,6 +232,30 @@ class AccountCubit extends Cubit<AccountState> with HydratedMixin {
 
     debugPrint("Failed to connect to Olympus after $maxRetries attempts");
     return false;
+  }
+
+  Future<OlympusFeeResponseRM> getLSPFee({required int amountSat}) async {
+    final pubkey = state.id!;
+    final amountMSat = satToMsat(amountSat);
+    final res =
+        await _olympusApi.getLSPFee(amountMSat: amountMSat, pubkey: pubkey);
+    return res;
+  }
+
+  Future<OlympusProposalResponseRM> getProposal({
+    required String bolt11,
+    required String feeId,
+  }) async {
+    final res = await _olympusApi.getProposal(bolt11: bolt11, feeId: feeId);
+    return res;
+  }
+
+  int satToMsat(int satoshis) {
+    return satoshis * 1000;
+  }
+
+  int mSatToSat(int millisatoshis) {
+    return millisatoshis ~/ 1000;
   }
 
   @override
