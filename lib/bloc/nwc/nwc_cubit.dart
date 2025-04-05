@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bolt11_decoder/bolt11_decoder.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:nostrpay_wallet/services/service_locator.dart';
@@ -140,6 +141,10 @@ class NWCCubit extends Cubit<NWCState> with HydratedMixin {
         debugPrint('NWCCubit: Handling getBalance request');
         _handleGetBalanceRequest(request as NwcGetBalanceRequest);
         break;
+      case NwcMethod.makeInvoice:
+        debugPrint('NWCCubit: Handling makeInvoice request');
+        _handleMakeInvoiceRequest(request as NwcMakeInvoiceRequest);
+        break;
       default:
         debugPrint('NWCCubit: Unauthorized request method: ${request.method}');
         _nwcWallet.failedToHandleRequest(
@@ -199,6 +204,101 @@ class NWCCubit extends Cubit<NWCState> with HydratedMixin {
       await _nwcWallet.failedToHandleRequest(
         request,
         error: NwcErrorCode.internal,
+      );
+    }
+  }
+
+  Future<void> _handleMakeInvoiceRequest(NwcMakeInvoiceRequest request) async {
+    try {
+      debugPrint('NWCCubit: Processing makeInvoice request');
+
+      final accountCubit = ServiceLocator().accountCubit;
+      if (accountCubit == null) {
+        debugPrint('NWCCubit: Error - AccountCubit not available');
+        await _nwcWallet.failedToHandleRequest(
+          request,
+          error: NwcErrorCode.internal,
+        );
+        return;
+      }
+
+      // Get the amount and description from the request
+      final int amountSat = request.amountSat;
+      final String description = request.description ?? 'Bijli Invoice';
+
+      // Check if we have enough inbound liquidity
+      final inboundLiquiditySat = await accountCubit.getInboundLiquiditySat();
+
+      String bolt11Invoice;
+
+      if (inboundLiquiditySat <= amountSat) {
+        // Handle LSP flow
+        debugPrint('NWCCubit: Insufficient inbound liquidity, using LSP flow');
+
+        // Get LSP fee
+        final lspFeeResponse =
+            await accountCubit.getLSPFee(amountSat: amountSat);
+        final int lspFeeSat =
+            accountCubit.mSatToSat(lspFeeResponse.feeAmountMsat);
+        final int invoiceAmountSat = amountSat - lspFeeSat;
+
+        if (invoiceAmountSat <= 0) {
+          throw Exception(
+              'The invoice amount must be greater than $lspFeeSat sats');
+        }
+
+        // Create the invoice
+        bolt11Invoice =
+            await accountCubit.addInvoice(amountSat: invoiceAmountSat);
+
+        // Get the proposal
+        final lspProposal = await accountCubit.getProposal(
+          bolt11: bolt11Invoice,
+          feeId: lspFeeResponse.id,
+        );
+
+        // Use the JIT bolt11 invoice
+        bolt11Invoice = lspProposal.jitBolt11;
+      } else {
+        // Regular invoice flow
+        debugPrint(
+            'NWCCubit: Sufficient inbound liquidity, using regular flow');
+        bolt11Invoice = await accountCubit.addInvoice(
+          amountSat: amountSat,
+          description: description,
+        );
+      }
+
+      // Parse the bolt11 invoice to get additional details
+      final paymentRequest = Bolt11PaymentRequest(bolt11Invoice);
+      final String paymentHash = paymentRequest.tags
+          .where((tag) => tag.type == 'payment_hash')
+          .first
+          .data;
+      final int expiry =
+          paymentRequest.tags.where((tag) => tag.type == 'expiry').first.data;
+      final int amountSatFromInvoice =
+          (paymentRequest.amount.toBigInt() * BigInt.from(10 ^ 8)).toInt();
+
+      // Handle the request with the invoice details
+      await _nwcWallet.makeInvoiceRequestHandled(
+        request,
+        invoice: bolt11Invoice,
+        description: description,
+        paymentHash: paymentHash,
+        amountSat: amountSatFromInvoice,
+        feesPaidSat: 0,
+        createdAt: paymentRequest.timestamp.toInt(),
+        expiresAt: expiry,
+        metadata: {},
+      );
+
+      debugPrint('NWCCubit: Successfully handled makeInvoice request');
+    } catch (e) {
+      debugPrint('NWCCubit: Error handling makeInvoice request: $e');
+      await _nwcWallet.failedToHandleRequest(
+        request,
+        error: NwcErrorCode.other,
       );
     }
   }

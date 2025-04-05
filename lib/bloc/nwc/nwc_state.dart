@@ -43,7 +43,11 @@ class NWCState {
           network: BitcoinNetwork.signet,
           blockHeight: 0,
           blockHash: '',
-          methods: [NwcMethod.getInfo, NwcMethod.getBalance],
+          methods: [
+            NwcMethod.getInfo,
+            NwcMethod.getBalance,
+            NwcMethod.makeInvoice,
+          ],
           balanceSat: 0,
           connectionUri: '',
           relay: 'wss://nostrue.com',

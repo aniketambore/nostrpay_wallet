@@ -25,6 +25,8 @@ dependencies:
     git:
       url: https://github.com/kumulynja/nwc_wallet
       ref: main
+  bolt11_decoder:
+    git: https://github.com/fusion44/dart_bolt11_decoder
 
 dev_dependencies:
   flutter_test:
