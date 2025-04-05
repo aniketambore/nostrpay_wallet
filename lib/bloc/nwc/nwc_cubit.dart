@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:nostrpay_wallet/services/service_locator.dart';
 import 'package:nwc_wallet/data/models/nwc_request.dart';
 import 'package:nwc_wallet/nwc_wallet.dart';
 
@@ -135,6 +136,10 @@ class NWCCubit extends Cubit<NWCState> with HydratedMixin {
         debugPrint('NWCCubit: Handling getInfo request');
         _handleGetInfoRequest(request as NwcGetInfoRequest);
         break;
+      case NwcMethod.getBalance:
+        debugPrint('NWCCubit: Handling getBalance request');
+        _handleGetBalanceRequest(request as NwcGetBalanceRequest);
+        break;
       default:
         debugPrint('NWCCubit: Unauthorized request method: ${request.method}');
         _nwcWallet.failedToHandleRequest(
@@ -160,6 +165,37 @@ class NWCCubit extends Cubit<NWCState> with HydratedMixin {
       debugPrint('NWCCubit: Successfully handled getInfo request');
     } catch (e) {
       debugPrint('NWCCubit: Error handling getInfo request: $e');
+      await _nwcWallet.failedToHandleRequest(
+        request,
+        error: NwcErrorCode.internal,
+      );
+    }
+  }
+
+  Future<void> _handleGetBalanceRequest(NwcGetBalanceRequest request) async {
+    try {
+      debugPrint('NWCCubit: Processing getBalance request');
+
+      final accountCubit = ServiceLocator().accountCubit;
+      if (accountCubit == null) {
+        debugPrint('NWCCubit: Error - AccountCubit not available');
+        await _nwcWallet.failedToHandleRequest(
+          request,
+          error: NwcErrorCode.internal,
+        );
+        return;
+      }
+
+      final balanceSat = await accountCubit.getSpendableBalanceSat() ?? 0;
+
+      await _nwcWallet.getBalanceRequestHandled(
+        request,
+        balanceSat: balanceSat,
+      );
+      debugPrint(
+          'NWCCubit: Successfully handled getBalance request with balance: $balanceSat sats');
+    } catch (e) {
+      debugPrint('NWCCubit: Error handling getBalance request: $e');
       await _nwcWallet.failedToHandleRequest(
         request,
         error: NwcErrorCode.internal,
