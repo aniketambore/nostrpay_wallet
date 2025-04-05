@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nostrpay_wallet/bloc/account/account_cubit.dart';
 import 'package:nostrpay_wallet/bloc/account/account_state.dart';
+import 'package:nostrpay_wallet/routes/create_invoice/create_invoice_page.dart';
 import 'package:nostrpay_wallet/routes/home/home_page.dart';
 import 'package:nostrpay_wallet/routes/initial_walkthrough/initial_walkthrough_page.dart';
 import 'package:nostrpay_wallet/routes/splash/splash_page.dart';
@@ -52,6 +53,11 @@ class UserApp extends StatelessWidget {
                         case '/':
                           return MaterialPageRoute(
                             builder: (_) => const HomePage(),
+                            settings: settings,
+                          );
+                        case '/create-invoice':
+                          return MaterialPageRoute(
+                            builder: (_) => const CreateInvoicePage(),
                             settings: settings,
                           );
                       }
