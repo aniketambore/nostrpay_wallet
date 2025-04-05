@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nostrpay_wallet/bloc/account/account_cubit.dart';
 import 'package:nostrpay_wallet/bloc/account/account_state.dart';
 import 'package:nostrpay_wallet/bloc/account/credentials_manager.dart';
+import 'package:nostrpay_wallet/bloc/nwc/nwc_cubit.dart';
 import 'package:nostrpay_wallet/services/injector.dart';
 
 class AccountPage extends StatefulWidget {
@@ -13,6 +14,34 @@ class AccountPage extends StatefulWidget {
 }
 
 class _AccountPageState extends State<AccountPage> {
+  @override
+  void initState() {
+    super.initState();
+    _initializeNWC();
+  }
+
+  Future<void> _initializeNWC() async {
+    final credentialsManager = CredentialsManager(
+      keyChain: ServiceInjector().keychain,
+    );
+    final mnemonic = await credentialsManager.restoreMnemonic();
+    if (mnemonic.isNotEmpty) {
+      if (mounted) {
+        final nwcCubit = context.read<NWCCubit>();
+        await nwcCubit.initialize(mnemonic);
+
+        // Only create a connection if one doesn't exist
+        if (nwcCubit.state.connectionUri.isEmpty) {
+          debugPrint('AccountPage: No existing connection, creating a new one');
+          await nwcCubit.createConnection();
+        } else {
+          debugPrint(
+              'AccountPage: Using existing connection: ${nwcCubit.state.connectionUri}');
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AccountCubit, AccountState>(
