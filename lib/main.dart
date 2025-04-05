@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:nostrpay_wallet/bloc/account/account_cubit.dart';
 import 'package:nostrpay_wallet/bloc/account/credentials_manager.dart';
+import 'package:nostrpay_wallet/bloc/nwc/nwc_cubit.dart';
 import 'package:nostrpay_wallet/services/injector.dart';
 import 'package:nostrpay_wallet/services/service_locator.dart';
 import 'package:path_provider/path_provider.dart';
@@ -44,6 +45,9 @@ void main() {
               ServiceLocator().setAccountCubit(accountCubit);
               return accountCubit;
             },
+          ),
+          BlocProvider<NWCCubit>(
+            create: (BuildContext context) => NWCCubit(),
           ),
         ],
         child: UserApp(),

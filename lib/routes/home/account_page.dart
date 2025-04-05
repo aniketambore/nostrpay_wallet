@@ -4,6 +4,7 @@ import 'package:nostrpay_wallet/bloc/account/account_cubit.dart';
 import 'package:nostrpay_wallet/bloc/account/account_state.dart';
 import 'package:nostrpay_wallet/bloc/account/credentials_manager.dart';
 import 'package:nostrpay_wallet/bloc/nwc/nwc_cubit.dart';
+import 'package:nostrpay_wallet/bloc/nwc/nwc_state.dart';
 import 'package:nostrpay_wallet/services/injector.dart';
 
 class AccountPage extends StatefulWidget {
@@ -54,6 +55,8 @@ class _AccountPageState extends State<AccountPage> {
               _BalanceCard(accountState: accountState),
               const SizedBox(height: 24),
               _WalletActions(),
+              const SizedBox(height: 24),
+              _NWCConnectionCard(),
             ],
           ),
         );
@@ -213,6 +216,76 @@ class _WalletActions extends StatelessWidget {
         const SizedBox(height: 4),
         Text(label),
       ],
+    );
+  }
+}
+
+class _NWCConnectionCard extends StatelessWidget {
+  const _NWCConnectionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<NWCCubit, NWCState>(
+      builder: (context, state) {
+        debugPrint(
+            '_NWCConnectionCard: Building with state - isLoading: ${state.isLoading}, error: ${state.error}');
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Nostr Wallet Connect',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (state.isLoading ?? false)
+                  const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                else if (state.error != null)
+                  Container(
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(4.0),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Error',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          state.error ?? 'Unknown error',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  SelectableText(
+                    state.connectionUri,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

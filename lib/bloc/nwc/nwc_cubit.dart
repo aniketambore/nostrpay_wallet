@@ -131,12 +131,39 @@ class NWCCubit extends Cubit<NWCState> with HydratedMixin {
   void _handleRequest(NwcRequest request) {
     debugPrint('NWCCubit: Handling request: ${request.method}');
     switch (request.method) {
+      case NwcMethod.getInfo:
+        debugPrint('NWCCubit: Handling getInfo request');
+        _handleGetInfoRequest(request as NwcGetInfoRequest);
+        break;
       default:
         debugPrint('NWCCubit: Unauthorized request method: ${request.method}');
         _nwcWallet.failedToHandleRequest(
           request,
           error: NwcErrorCode.unauthorized,
         );
+    }
+  }
+
+  Future<void> _handleGetInfoRequest(NwcGetInfoRequest request) async {
+    try {
+      debugPrint('NWCCubit: Processing getInfo request');
+      await _nwcWallet.getInfoRequestHandled(
+        request,
+        alias: state.alias,
+        color: state.color,
+        pubkey: state.pubkey,
+        network: state.network,
+        blockHeight: state.blockHeight,
+        blockHash: state.blockHash,
+        methods: state.methods,
+      );
+      debugPrint('NWCCubit: Successfully handled getInfo request');
+    } catch (e) {
+      debugPrint('NWCCubit: Error handling getInfo request: $e');
+      await _nwcWallet.failedToHandleRequest(
+        request,
+        error: NwcErrorCode.internal,
+      );
     }
   }
 
