@@ -4,7 +4,9 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:ldk_node/ldk_node.dart';
+import 'package:nostrpay_wallet/app_config.dart';
 import 'package:nostrpay_wallet/config.dart' as cfg;
+import 'package:nostrpay_wallet/services/olympus_api.dart';
 
 import 'account_state.dart';
 import 'credentials_manager.dart';
@@ -15,11 +17,14 @@ class AccountCubit extends Cubit<AccountState> with HydratedMixin {
 
   AccountCubit(
     this._credentialsManager,
-  ) : super(AccountState.initial()) {
+  )   : _olympusApi = OlympusApi(),
+        super(AccountState.initial()) {
     hydrate();
 
     if (!state.initial) connect();
   }
+
+  final OlympusApi _olympusApi;
 
   Future connect({
     String? mnemonic,
@@ -150,6 +155,44 @@ class AccountCubit extends Cubit<AccountState> with HydratedMixin {
       return inboundLiquiditySat;
     }
     return 0;
+  }
+
+  Future<bool> _connectToOlympus() async {
+    if (_ldkNode != null) {
+      debugPrint('Connecting to Olympus');
+      final appConfig = AppConfig();
+      await _ldkNode!.connect(
+        address: appConfig.lsps1.olympusSignet.address,
+        nodeId: appConfig.lsps1.olympusSignet.nodeId,
+        persist: true,
+      );
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> connectToOlympusWithRetry({
+    Duration retryDelay = const Duration(seconds: 3),
+    int maxRetries = 10,
+  }) async {
+    int retryCount = 0;
+
+    while (retryCount < maxRetries) {
+      final isConnected = await _connectToOlympus();
+      if (isConnected) {
+        debugPrint("Successfully connected to Olympus");
+        return true;
+      }
+
+      debugPrint("Retrying connection to Olympus...");
+      retryCount++;
+
+      // Wait for the specified delay before the next retry
+      await Future.delayed(retryDelay);
+    }
+
+    debugPrint("Failed to connect to Olympus after $maxRetries attempts");
+    return false;
   }
 
   @override
