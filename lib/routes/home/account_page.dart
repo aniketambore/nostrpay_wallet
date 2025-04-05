@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nostrpay_wallet/bloc/account/account_cubit.dart';
 import 'package:nostrpay_wallet/bloc/account/account_state.dart';
+import 'package:nostrpay_wallet/bloc/account/credentials_manager.dart';
+import 'package:nostrpay_wallet/services/injector.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -21,6 +23,8 @@ class _AccountPageState extends State<AccountPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _BalanceCard(accountState: accountState),
+              const SizedBox(height: 24),
+              _WalletActions(),
             ],
           ),
         );
@@ -74,6 +78,110 @@ class _BalanceCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _WalletActions extends StatelessWidget {
+  const _WalletActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _buildActionButton(
+          icon: Icons.send,
+          label: 'Send',
+          onPressed: () {},
+        ),
+        _buildActionButton(
+          icon: Icons.call_received,
+          label: 'Receive',
+          onPressed: () {},
+        ),
+        _buildActionButton(
+          icon: Icons.visibility,
+          label: 'Mnemonic',
+          onPressed: () async {
+            final credentialsManager = CredentialsManager(
+              keyChain: ServiceInjector().keychain,
+            );
+            final mnemonic = await credentialsManager.restoreMnemonic();
+
+            if (context.mounted) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Wallet Mnemonic'),
+                  content: SelectableText(mnemonic),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
+        ),
+        _buildActionButton(
+          icon: Icons.account_tree,
+          label: 'Channels',
+          onPressed: () async {
+            final cubit = context.read<AccountCubit>();
+            final channels = await cubit.listChannels();
+
+            if (context.mounted) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Lightning Channels'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: channels
+                          .map((info) => Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4.0),
+                                child: Text(info),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: Icon(icon),
+          onPressed: onPressed,
+          iconSize: 32,
+        ),
+        const SizedBox(height: 4),
+        Text(label),
+      ],
     );
   }
 }

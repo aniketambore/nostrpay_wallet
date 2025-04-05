@@ -157,6 +157,27 @@ class AccountCubit extends Cubit<AccountState> with HydratedMixin {
     return 0;
   }
 
+  Future<List<String>> listChannels() async {
+    final channels = await _ldkNode!.listChannels();
+    List<String> channelInfo = [];
+
+    for (final ChannelDetails channel in channels) {
+      final outboundCapacitySat =
+          (channel.outboundCapacityMsat ~/ BigInt.from(1000)).toInt();
+      final inboundCapacitySat =
+          (channel.inboundCapacityMsat ~/ BigInt.from(1000)).toInt();
+
+      channelInfo
+          .add('Channel Status: ${channel.isUsable ? 'Usable' : 'Not Usable'}');
+      channelInfo.add('Channel ID: ${channel.counterpartyNodeId.hex}');
+      channelInfo.add('Channel Value: ${channel.channelValueSats} sats');
+      channelInfo.add('Outbound Capacity: $outboundCapacitySat sats');
+      channelInfo.add('Inbound Capacity: $inboundCapacitySat sats');
+    }
+
+    return channelInfo;
+  }
+
   Future<bool> _connectToOlympus() async {
     if (_ldkNode != null) {
       debugPrint('Connecting to Olympus');
