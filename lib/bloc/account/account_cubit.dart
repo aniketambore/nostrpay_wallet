@@ -72,7 +72,8 @@ class AccountCubit extends Cubit<AccountState> with HydratedMixin {
       _ldkNode = await builder.build();
       await _ldkNode!.start();
 
-      // TODO: Fetch node details after successful start
+      // Fetch node details after successful start
+      await fetchNodeDetails();
     } catch (e) {
       debugPrint("failed to connect to ldk_node lib $e");
       emit(state.copyWith(connectionStatus: ConnectionStatus.DISCONNECTED));
@@ -85,6 +86,70 @@ class AccountCubit extends Cubit<AccountState> with HydratedMixin {
     debugPrint("on connected");
     await _ldkNode?.syncWallets();
     // TODO: sync sdk periodically
+  }
+
+  Future<void> fetchNodeDetails() async {
+    debugPrint("Fetching node details...");
+    final nodeId = await getNodeId();
+    final balanceSat = await getSpendableBalanceSat();
+    final inboundLiquiditySat = await getInboundLiquiditySat();
+
+    debugPrint("NodeId: $nodeId");
+
+    emit(state.copyWith(
+      id: nodeId,
+      balanceSat: balanceSat,
+      maxInboundLiquiditySat: inboundLiquiditySat,
+    ));
+  }
+
+  Future<String?> getNodeId() async {
+    if (_ldkNode != null) {
+      debugPrint('Getting node id');
+      final nodeId = await _ldkNode!.nodeId();
+      return nodeId.hex;
+    }
+    return null;
+  }
+
+  Future<int?> getSpendableBalanceSat() async {
+    if (_ldkNode != null) {
+      debugPrint('Getting spendable balance');
+
+      final usableChannels =
+          (await _ldkNode!.listChannels()).where((channel) => channel.isUsable);
+
+      final outboundCapacityMsat = usableChannels.fold(
+        BigInt.zero,
+        (sum, channel) => sum + channel.outboundCapacityMsat,
+      );
+
+      final balanceSat = (outboundCapacityMsat ~/ BigInt.from(1000)).toInt();
+
+      return balanceSat;
+    }
+    return null;
+  }
+
+  Future<int> getInboundLiquiditySat() async {
+    if (_ldkNode != null) {
+      debugPrint("Getting inbound liquidity");
+      // Get the total inbound liquidity in satoshis by summing up the inbound
+      // capacity of all channels that are usable and return it in satoshis.
+      final usableChannels =
+          (await _ldkNode!.listChannels()).where((channel) => channel.isUsable);
+
+      final inboundCapacityMsat = usableChannels.fold(
+        BigInt.zero,
+        (sum, channel) => sum + channel.inboundCapacityMsat,
+      );
+
+      final inboundLiquiditySat =
+          (inboundCapacityMsat ~/ BigInt.from(1000)).toInt();
+
+      return inboundLiquiditySat;
+    }
+    return 0;
   }
 
   @override
